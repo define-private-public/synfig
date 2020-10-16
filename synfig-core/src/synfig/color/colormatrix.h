@@ -198,40 +198,19 @@ private:
 	ColorMatrix matrix;
 
 	bool zero_all;
-	union
-	{
-		bool zero[4];
-		struct { bool zero_r, zero_g, zero_b, zero_a; };
-	};
+	struct { bool zero_r, zero_g, zero_b, zero_a; };
 
 	Color constant_value;
 	bool constant_all;
-	union
-	{
-		bool constant[4];
-		struct { bool constant_r, constant_g, constant_b, constant_a; };
-	};
+	struct { bool constant_r, constant_g, constant_b, constant_a; };
 
 	bool copy_all;
-	union
-	{
-		bool copy[4];
-		struct { bool copy_r, copy_g, copy_b, copy_a; };
-	};
+	struct { bool copy_r, copy_g, copy_b, copy_a; };
 
 	bool affects_transparent;
 
-	union
-	{
-		transform_func_ptr transform_funcs[4];
-		struct { transform_func_ptr transform_func_r, transform_func_g, transform_func_b, transform_func_a; };
-	};
-
-	union
-	{
-		batch_func_ptr batch_funcs[4];
-		struct { batch_func_ptr batch_func_r, batch_func_g, batch_func_b, batch_func_a; };
-	};
+	struct { transform_func_ptr transform_func_r, transform_func_g, transform_func_b, transform_func_a; };
+	struct { batch_func_ptr batch_func_r, batch_func_g, batch_func_b, batch_func_a; };
 
 public:
 	BatchProcessor(const ColorMatrix &matrix = ColorMatrix());
