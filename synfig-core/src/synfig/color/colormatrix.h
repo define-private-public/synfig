@@ -202,9 +202,6 @@ private:
 	bool copy_all;
 	bool affects_transparent;
 
-	struct { transform_func_ptr transform_func_r, transform_func_g, transform_func_b, transform_func_a; };
-	struct { batch_func_ptr batch_func_r, batch_func_g, batch_func_b, batch_func_a; };
-
 public:
 	BatchProcessor(const ColorMatrix &matrix = ColorMatrix());
 

@@ -202,15 +202,7 @@ ColorMatrix::BatchProcessor::BatchProcessor(const ColorMatrix &matrix):
 	constant_value(matrix.get_constant()),
 	constant_all(matrix.is_constant()),
 	copy_all(matrix.is_copy()),
-	affects_transparent(matrix.is_affects_transparent()),
-	transform_func_r(Internal::get_transform_func_c<0>(matrix)),
-	transform_func_g(Internal::get_transform_func_c<1>(matrix)),
-	transform_func_b(Internal::get_transform_func_c<2>(matrix)),
-	transform_func_a(Internal::get_transform_func_c<3>(matrix)),
-	batch_func_r(Internal::get_batch_func_c<0>(matrix)),
-	batch_func_g(Internal::get_batch_func_c<1>(matrix)),
-	batch_func_b(Internal::get_batch_func_c<2>(matrix)),
-	batch_func_a(Internal::get_batch_func_c<3>(matrix))
+	affects_transparent(matrix.is_affects_transparent())
 { }
 
 
@@ -268,10 +260,10 @@ ColorMatrix::BatchProcessor::process(Color *dest, int dest_stride, const Color *
 		for(; dest != dest_end; dest += dest_stride, src += src_stride)
 		{
 			const Color *src_end = src + width;
-			batch_func_r(matrix, (value_type*)dest + 0, src, src_end);
-			batch_func_g(matrix, (value_type*)dest + 1, src, src_end);
-			batch_func_b(matrix, (value_type*)dest + 2, src, src_end);
-			batch_func_a(matrix, (value_type*)dest + 3, src, src_end);
+			Internal::get_batch_func_c<0>(matrix)(matrix, (value_type*)dest + 0, src, src_end);
+			Internal::get_batch_func_c<1>(matrix)(matrix, (value_type*)dest + 1, src, src_end);
+			Internal::get_batch_func_c<2>(matrix)(matrix, (value_type*)dest + 2, src, src_end);
+			Internal::get_batch_func_c<3>(matrix)(matrix, (value_type*)dest + 3, src, src_end);
 		}
 	}
 	else
@@ -281,10 +273,10 @@ ColorMatrix::BatchProcessor::process(Color *dest, int dest_stride, const Color *
 		for(; dest != dest_end; dest += dest_dr)
 			for(Color *dest_row_end = dest + width; dest < dest_row_end; ++dest)
 			{
-				c.set_r(transform_func_r(matrix, *dest));
-				c.set_g(transform_func_g(matrix, *dest));
-				c.set_b(transform_func_b(matrix, *dest));
-				c.set_a(transform_func_a(matrix, *dest));
+				c.set_r(Internal::get_transform_func_c<0>(matrix)(matrix, *dest));
+				c.set_g(Internal::get_transform_func_c<1>(matrix)(matrix, *dest));
+				c.set_b(Internal::get_transform_func_c<2>(matrix)(matrix, *dest));
+				c.set_a(Internal::get_transform_func_c<3>(matrix)(matrix, *dest));
 				*dest = c;
 			}
 	}
