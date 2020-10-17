@@ -196,17 +196,10 @@ class ColorMatrix::BatchProcessor
 {
 private:
 	ColorMatrix matrix;
-
 	bool zero_all;
-	struct { bool zero_r, zero_g, zero_b, zero_a; };
-
 	Color constant_value;
 	bool constant_all;
-	struct { bool constant_r, constant_g, constant_b, constant_a; };
-
 	bool copy_all;
-	struct { bool copy_r, copy_g, copy_b, copy_a; };
-
 	bool affects_transparent;
 
 	struct { transform_func_ptr transform_func_r, transform_func_g, transform_func_b, transform_func_a; };
