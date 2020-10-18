@@ -48,9 +48,6 @@ public:
 	typedef value_type value_array[25];
 	typedef value_row value_matrix[5];
 
-	typedef value_type (*transform_func_ptr)(const ColorMatrix &m, const Color &src);
-	typedef void (*batch_func_ptr)(const ColorMatrix &m, value_type *dest, const Color *src, const Color *src_end);
-
 	class BatchProcessor;
 
 	//! The matrix array
