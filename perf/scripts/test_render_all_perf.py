@@ -31,8 +31,8 @@ import subprocess
 from collections import OrderedDict
 
 SIF_DIR = 'synfig-tests/export/lottie/'
-SIF_EXE = 'output/bin/synfig'
-NUM_PASSES = 10                 # if you want to work on this script, setting this value to `3` helps
+SIF_EXE = 'output/Release/bin/synfig'
+NUM_PASSES = 1                 # if you want to work on this script, setting this value to `3` helps
 COMMIT_ID = 'perf_imps-'        # TODO see list below
 
 
