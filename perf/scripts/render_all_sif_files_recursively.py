@@ -136,10 +136,7 @@ def read_processed_files(filename: str) -> Dict[str, float]:
 
 def main():
     """
-    Main function to handle command-line arguments, find .sif files (relative paths),
-    run an executable on each found file (timed), suppressing the executable's output,
-    collecting results, logging results incrementally to CSV, skipping already processed files
-    (showing their previous time), and calculating cumulative processing time.
+    Main function with updated terminal output format.
     """
     if len(sys.argv) < 3:
         print(f"Usage: {sys.argv[0]} <executable_path> <search_directory>", file=sys.stderr)
@@ -187,14 +184,16 @@ def main():
 
         # Use enumerate starting from 1 for the counter
         for idx, sif_relative_path in enumerate(found_files, start=1): # Renamed variable
-            # Format the counter string with zero padding
-            counter_str = f"{idx:0{width}}/{total_files_count}"
+            # Format the counter string with zero padding (without total)
+            counter_str = f"{idx:0{width}}"
+            # Get the basename of the file
+            sif_basename = Path(sif_relative_path).name
 
             # --- Check if file was already processed (using relative path) ---
             if sif_relative_path in already_processed_data:
                 previous_duration = already_processed_data[sif_relative_path]
-                # Updated Skipping message to include previous duration
-                print(f"---> [{counter_str}] Skipping (took {previous_duration:.1f} s): {sif_relative_path}")
+                # Updated Skipping message format
+                print(f"---> [{counter_str}] Skip: {sif_basename} (took {previous_duration:.1f} s)")
                 skipped_count += 1
                 continue # Move to the next file
 
@@ -208,8 +207,8 @@ def main():
             duration: float = 0.0
             result_obj: Optional[ProcessingResult] = None # Define here for broader scope
 
-            # Print message before starting, including the counter (using relative path)
-            print(f"---> [{counter_str}] Processing: {sif_relative_path}", end="")
+            # Print message before starting, including the counter (using basename)
+            print(f"---> [{counter_str}] Processing: {sif_basename}", end="") # Use basename here
             sys.stdout.flush() # Flush output buffer
             start_time = time.perf_counter() # Start timer for this file
 
@@ -226,9 +225,11 @@ def main():
 
                 if result.returncode == 0:
                     status = "Success"
+                    # Append status and time (time already at end)
                     print(f" [{status}] ({duration:.1f} s)")
                 else:
                     status = "Failed"
+                    # Append status and time (time already at end)
                     print(f" [{status} - Code: {return_code}] ({duration:.1f} s)")
 
                 # Store the RELATIVE path in the result object
@@ -237,12 +238,14 @@ def main():
             except OSError as e:
                  duration = time.perf_counter() - start_time
                  status = "OS Error"
-                 print(f" [OS Error: {e}] ({duration:.1f} s)")
+                 # Append status and time (time already at end)
+                 print(f" [{status}: {e}] ({duration:.1f} s)")
                  # Store the RELATIVE path in the result object
                  result_obj = ProcessingResult(sif_relative_path, status, None, duration)
             except Exception as e:
                  duration = time.perf_counter() - start_time
                  status = "Unexpected Error"
+                 # Append status and time (time already at end)
                  print(f" [{status}: {e}] ({duration:.1f} s)")
                  # Store the RELATIVE path in the result object
                  result_obj = ProcessingResult(sif_relative_path, status, None, duration)
