@@ -8,9 +8,10 @@ import time       # Module for timing execution
 from dataclasses import dataclass # To create data classes
 from typing import List, Optional, Set, Tuple, Dict # Added Dict for type hinting
 import csv        # Module for CSV file operations
+import argparse   # Module for parsing command-line arguments
 
 # --- Configuration ---
-CSV_FILENAME = "processing_results.csv"
+# CSV_FILENAME constant removed, will be handled by argparse
 
 @dataclass
 class ProcessingResult:
@@ -136,14 +137,31 @@ def read_processed_files(filename: str) -> Dict[str, float]:
 
 def main():
     """
-    Main function with refined terminal output format.
+    Main function using argparse for command-line arguments.
     """
-    if len(sys.argv) < 3:
-        print(f"Usage: {sys.argv[0]} <executable_path> <search_directory>", file=sys.stderr)
-        sys.exit(1)
+    # --- Argument Parsing ---
+    parser = argparse.ArgumentParser(
+        description="Finds .sif files recursively and runs an executable on them, logging results and skipping previously processed files."
+    )
+    parser.add_argument(
+        "executable_path",
+        help="Path to the executable to run on each .sif file."
+    )
+    parser.add_argument(
+        "search_directory",
+        help="Directory to search recursively for .sif files."
+    )
+    parser.add_argument(
+        "--csv", # Removed "-c" short flag
+        default="results.csv", # Default filename
+        help="Filename for reading/writing processing results (default: results.csv)"
+    )
+    args = parser.parse_args()
 
-    executable_path_str = sys.argv[1]
-    target_directory_str = sys.argv[2] # Keep original string for reconstructing absolute paths
+    # Use parsed arguments
+    executable_path_str = args.executable_path
+    target_directory_str = args.search_directory
+    csv_filename = args.csv # Use the potentially overridden filename
 
     # --- Validate Executable Path ---
     exe_path = Path(executable_path_str)
@@ -160,7 +178,8 @@ def main():
     executable_abs_path = str(exe_path.resolve()) # Resolve executable path once
 
     # --- Read previously processed files data (relative filepath -> duration) ---
-    already_processed_data = read_processed_files(CSV_FILENAME)
+    # Pass the potentially overridden csv_filename
+    already_processed_data = read_processed_files(csv_filename)
     previous_total_duration = sum(already_processed_data.values())
     if len(already_processed_data) > 0:
         print(f"Sum of previously recorded durations: {previous_total_duration:.2f} s")
@@ -180,7 +199,8 @@ def main():
         base_search_path = Path(target_directory_str).resolve()
 
         print(f"\nProcessing {total_files_count} .sif files using '{executable_abs_path}' (output suppressed)...")
-        print(f"Results will be logged incrementally to: {CSV_FILENAME}")
+        # Use the potentially overridden csv_filename
+        print(f"Results will be logged incrementally to: {csv_filename}")
 
         # Use enumerate starting from 1 for the counter
         for idx, sif_relative_path in enumerate(found_files, start=1): # Renamed variable
@@ -192,7 +212,7 @@ def main():
             # --- Check if file was already processed (using relative path) ---
             if sif_relative_path in already_processed_data:
                 previous_duration = already_processed_data[sif_relative_path]
-                # Updated Skipping message format
+                # Use [Skip] status format
                 print(f"  {counter_str} [Skip] {sif_basename} -- {previous_duration:.1f} s")
                 skipped_count += 1
                 continue # Move to the next file
@@ -254,7 +274,8 @@ def main():
             # Append the result object to the list AND write to CSV
             if result_obj: # Ensure result_obj was created
                  results_list_this_run.append(result_obj)
-                 append_result_to_csv(result_obj, CSV_FILENAME) # Log result immediately
+                 # Pass the potentially overridden csv_filename
+                 append_result_to_csv(result_obj, csv_filename) # Log result immediately
 
         # --- Calculate Durations ---
         current_run_duration = sum(r.duration_seconds for r in results_list_this_run)
@@ -275,7 +296,8 @@ def main():
         print(f"Failed this run (non-zero exit or error): {fail_count}")
         print(f"Total processing time this run: {current_run_duration:.2f} s") # Clarified label
         print(f"Cumulative total processing time (from CSV + this run): {cumulative_total_duration:.2f} s") # Added cumulative time
-        print(f"Results logged to: {CSV_FILENAME}")
+        # Use the potentially overridden csv_filename
+        print(f"Results logged to: {csv_filename}")
 
     else:
         # Only print if the find function didn't already print an error
