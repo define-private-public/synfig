@@ -5,10 +5,11 @@ from pathlib import Path
 import os
 import subprocess # Module to run external commands
 import time       # Module for timing execution
-from dataclasses import dataclass # To create data classes
+from dataclasses import dataclass, field # To create data classes
 from typing import List, Optional, Set, Tuple, Dict # Added Dict for type hinting
 import csv        # Module for CSV file operations
 import argparse   # Module for parsing command-line arguments
+import collections # For Counter
 
 # --- Configuration ---
 # CSV_FILENAME constant removed, will be handled by argparse
@@ -21,6 +22,7 @@ class ProcessingResult:
     status: str # e.g., "Success", "Failed", "OS Error", "Unexpected Error"
     return_code: Optional[int] # None if subprocess didn't finish
     duration_seconds: float
+    callgrind_output: Optional[str] = None # Path to callgrind output file (relative to CWD)
 
 def find_sif_files_recursively(directory_path_str: str) -> list[str]:
     """
@@ -74,18 +76,19 @@ def append_result_to_csv(result: ProcessingResult, filename: str):
     is_empty = not file_exists or os.path.getsize(filename) == 0
     try:
         with open(filename, mode='a', newline='', encoding='utf-8') as csvfile:
-            # Add 'id_num' as the first fieldname
-            fieldnames = ['id_num', 'filepath', 'status', 'return_code', 'duration_seconds']
+            # Add 'callgrind_output' to fieldnames
+            fieldnames = ['id_num', 'filepath', 'status', 'return_code', 'duration_seconds', 'callgrind_output']
             writer = csv.writer(csvfile)
             if is_empty:
                 writer.writerow(fieldnames)
-            # Add result.id_num as the first element in the row
+            # Add result.callgrind_output to the row
             writer.writerow([
                 result.id_num,
                 result.filepath,
                 result.status,
                 result.return_code if result.return_code is not None else '',
-                result.duration_seconds
+                result.duration_seconds,
+                result.callgrind_output if result.callgrind_output is not None else ''
             ])
     except IOError as e:
         print(f"\nError writing to CSV file {filename}: {e}", file=sys.stderr)
@@ -95,7 +98,7 @@ def append_result_to_csv(result: ProcessingResult, filename: str):
 def read_processed_files(filename: str) -> Dict[str, float]:
     """
     Reads the CSV, returning a dictionary mapping processed relative filepaths
-    to their previously recorded durations. (Ignores id_num for now).
+    to their previously recorded durations. (Ignores id_num and callgrind_output for now).
     """
     processed_data: Dict[str, float] = {}
     # Still only strictly requires these headers for skipping logic
@@ -146,11 +149,11 @@ def read_processed_files(filename: str) -> Dict[str, float]:
 
 def main():
     """
-    Main function using argparse for command-line arguments.
+    Main function using argparse for command-line arguments, supporting optional Callgrind.
     """
     # --- Argument Parsing ---
     parser = argparse.ArgumentParser(
-        description="Finds .sif files recursively and runs an executable on them, logging results and skipping previously processed files."
+        description="Finds .sif files recursively and runs an executable on them (optionally under callgrind), logging results and skipping previously processed files."
     )
     parser.add_argument(
         "executable_path",
@@ -165,12 +168,24 @@ def main():
         default="results.csv", # Default filename
         help="Filename for reading/writing processing results (default: results.csv)"
     )
+    parser.add_argument(
+        '--run-callgrind',
+        action='store_true', # Makes it a boolean flag
+        help='Run the executable under valgrind --tool=callgrind.'
+    )
+    parser.add_argument(
+        '--callgrind-output-dir',
+        default='callgrind_output', # Default output directory
+        help='Directory to save callgrind output files (default: callgrind_output)'
+    )
     args = parser.parse_args()
 
     # Use parsed arguments
     executable_path_str = args.executable_path
     target_directory_str = args.search_directory
-    csv_filename = args.csv # Use the potentially overridden filename
+    csv_filename = args.csv
+    run_callgrind = args.run_callgrind
+    callgrind_output_dir = args.callgrind_output_dir
 
     # --- Validate Executable Path ---
     exe_path = Path(executable_path_str)
@@ -186,8 +201,19 @@ def main():
         sys.exit(1)
     executable_abs_path = str(exe_path.resolve()) # Resolve executable path once
 
+    # --- Create Callgrind Output Directory if needed ---
+    callgrind_dir_path = None
+    if run_callgrind:
+        callgrind_dir_path = Path(callgrind_output_dir)
+        try:
+            callgrind_dir_path.mkdir(parents=True, exist_ok=True)
+            print(f"Callgrind output will be saved to: {callgrind_dir_path.resolve()}")
+        except OSError as e:
+            print(f"Error: Could not create Callgrind output directory '{callgrind_output_dir}': {e}", file=sys.stderr)
+            sys.exit(1)
+
+
     # --- Read previously processed files data (relative filepath -> duration) ---
-    # Pass the potentially overridden csv_filename
     already_processed_data = read_processed_files(csv_filename)
     previous_total_duration = sum(already_processed_data.values())
     if len(already_processed_data) > 0:
@@ -196,6 +222,11 @@ def main():
 
     # --- Find the .sif files (relative paths) ---
     found_files = find_sif_files_recursively(target_directory_str) # Now returns relative paths
+
+    # --- Pre-calculate basename counts for collision detection ---
+    basename_counts = collections.Counter()
+    if run_callgrind and found_files: # Only needed if running callgrind
+         basename_counts = collections.Counter(Path(f).name for f in found_files)
 
     # --- Execute the command for each found file and collect results ---
     results_list_this_run: List[ProcessingResult] = [] # Results from *this run*
@@ -207,8 +238,8 @@ def main():
         # Resolve search directory path for reconstructing absolute paths later
         base_search_path = Path(target_directory_str).resolve()
 
-        print(f"\nProcessing {total_files_count} .sif files using '{executable_abs_path}' (output suppressed)...")
-        # Use the potentially overridden csv_filename
+        run_mode = "Valgrind/Callgrind" if run_callgrind else "directly"
+        print(f"\nProcessing {total_files_count} .sif files using {run_mode} on '{executable_abs_path}' (output suppressed)...")
         print(f"Results will be logged incrementally to: {csv_filename}")
 
         # Use enumerate starting from 1 for the counter
@@ -227,8 +258,34 @@ def main():
                 continue # Move to the next file
 
             # --- Process the file ---
-            # Reconstruct absolute path for the subprocess
+            # Reconstruct absolute path for the subprocess argument
             sif_absolute_path = str(base_search_path / sif_relative_path)
+            callgrind_out_relative_path: Optional[str] = None # Initialize
+
+            # Construct the command based on the flag
+            if run_callgrind:
+                # Construct callgrind output filename with collision handling
+                if basename_counts[sif_basename] > 1:
+                    # Prepend id if basename is not unique
+                    callgrind_out_name = f"{counter_str}.{sif_basename}.callgrind"
+                else:
+                    # Use simple name if basename is unique
+                    callgrind_out_name = f"{sif_basename}.callgrind"
+
+                callgrind_out_path = callgrind_dir_path / callgrind_out_name
+                callgrind_out_relative_path = str(callgrind_out_path) # Relative to CWD
+
+                command = [
+                    'valgrind',
+                    '--tool=callgrind',
+                    f'--callgrind-out-file={callgrind_out_relative_path}', # Use relative path for option
+                    executable_abs_path, # The executable to profile
+                    sif_absolute_path    # The argument (.sif file) to the executable
+                ]
+            else:
+                # Command for direct execution
+                command = [executable_abs_path, sif_absolute_path]
+
 
             # Initialize variables for this iteration's result
             status: str = "Unknown Error"
@@ -243,12 +300,12 @@ def main():
             start_time = time.perf_counter() # Start timer for this file
 
             try:
-                # Run the command, using the *absolute* path for the .sif file
+                # Run the command (either direct or valgrind)
                 result = subprocess.run(
-                    [executable_abs_path, sif_absolute_path], # Use absolute path here
+                    command, # Pass the constructed command list
                     check=False,
-                    stdout=subprocess.DEVNULL, # Suppress standard output
-                    stderr=subprocess.DEVNULL  # Suppress standard error
+                    stdout=subprocess.DEVNULL, # Suppress stdout
+                    stderr=subprocess.DEVNULL  # Suppress stderr
                 )
                 duration = time.perf_counter() - start_time
                 return_code = result.returncode
@@ -262,23 +319,25 @@ def main():
                     # Append status and time (time already at end)
                     print(f" ({status}: {return_code}) -- {duration:.1f} s")
 
-                # Store the result object, including the index (idx)
-                result_obj = ProcessingResult(idx, sif_relative_path, status, return_code, duration)
+                # Store the result object, including the index (idx) and callgrind path (if any)
+                result_obj = ProcessingResult(idx, sif_relative_path, status, return_code, duration, callgrind_out_relative_path)
 
             except OSError as e:
+                 # Error executing the command itself (e.g., valgrind not found, permissions)
                  duration = time.perf_counter() - start_time
                  status = "OS Error"
                  # Append status and time (time already at end)
                  print(f" ({status}: {e}) -- {duration:.1f} s")
                  # Store the result object, including the index (idx)
-                 result_obj = ProcessingResult(idx, sif_relative_path, status, None, duration)
+                 result_obj = ProcessingResult(idx, sif_relative_path, status, None, duration, None) # No callgrind file
             except Exception as e:
+                 # Other unexpected errors
                  duration = time.perf_counter() - start_time
                  status = "Unexpected Error"
                  # Append status and time (time already at end)
                  print(f" ({status}: {e}) -- {duration:.1f} s")
                  # Store the result object, including the index (idx)
-                 result_obj = ProcessingResult(idx, sif_relative_path, status, None, duration)
+                 result_obj = ProcessingResult(idx, sif_relative_path, status, None, duration, None) # No callgrind file
 
             # Append the result object to the list AND write to CSV
             if result_obj: # Ensure result_obj was created
@@ -305,8 +364,10 @@ def main():
         print(f"Failed this run (non-zero exit or error): {fail_count}")
         print(f"Total processing time this run: {current_run_duration:.2f} s") # Clarified label
         print(f"Cumulative total processing time (from CSV + this run): {cumulative_total_duration:.2f} s") # Added cumulative time
-        # Use the potentially overridden csv_filename
         print(f"Results logged to: {csv_filename}")
+        if run_callgrind:
+             print(f"Callgrind output saved to directory: {callgrind_output_dir}")
+
 
     else:
         # Only print if the find function didn't already print an error
