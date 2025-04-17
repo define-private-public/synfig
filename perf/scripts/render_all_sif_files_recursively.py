@@ -16,6 +16,7 @@ import argparse   # Module for parsing command-line arguments
 @dataclass
 class ProcessingResult:
     """Holds the result of processing a single .sif file."""
+    id_num: int # Added ID number (1-based index)
     filepath: str # Now stores path relative to search directory
     status: str # e.g., "Success", "Failed", "OS Error", "Unexpected Error"
     return_code: Optional[int] # None if subprocess didn't finish
@@ -69,17 +70,19 @@ def find_sif_files_recursively(directory_path_str: str) -> list[str]:
 
 def append_result_to_csv(result: ProcessingResult, filename: str):
     """Appends a single ProcessingResult to the specified CSV file."""
-    # This function doesn't need changes, as result.filepath is now relative
     file_exists = Path(filename).exists()
     is_empty = not file_exists or os.path.getsize(filename) == 0
     try:
         with open(filename, mode='a', newline='', encoding='utf-8') as csvfile:
-            fieldnames = ['filepath', 'status', 'return_code', 'duration_seconds']
+            # Add 'id_num' as the first fieldname
+            fieldnames = ['id_num', 'filepath', 'status', 'return_code', 'duration_seconds']
             writer = csv.writer(csvfile)
             if is_empty:
                 writer.writerow(fieldnames)
+            # Add result.id_num as the first element in the row
             writer.writerow([
-                result.filepath, # This is now the relative path
+                result.id_num,
+                result.filepath,
                 result.status,
                 result.return_code if result.return_code is not None else '',
                 result.duration_seconds
@@ -92,10 +95,10 @@ def append_result_to_csv(result: ProcessingResult, filename: str):
 def read_processed_files(filename: str) -> Dict[str, float]:
     """
     Reads the CSV, returning a dictionary mapping processed relative filepaths
-    to their previously recorded durations.
+    to their previously recorded durations. (Ignores id_num for now).
     """
-    # This function doesn't need changes, it reads whatever path is in the CSV
     processed_data: Dict[str, float] = {}
+    # Still only strictly requires these headers for skipping logic
     required_headers = ['filepath', 'duration_seconds']
 
     if not Path(filename).exists():
@@ -105,8 +108,14 @@ def read_processed_files(filename: str) -> Dict[str, float]:
     try:
         with open(filename, mode='r', newline='', encoding='utf-8') as csvfile:
             reader = csv.DictReader(csvfile)
+            # Check if the required headers for skipping are present
             if not all(header in reader.fieldnames for header in required_headers):
                  print(f"Warning: CSV file '{filename}' is missing required headers ('filepath', 'duration_seconds'). Cannot determine previously processed files accurately.", file=sys.stderr)
+                 # Try reading just filepaths if possible for skipping
+                 if 'filepath' in reader.fieldnames:
+                     for row in reader:
+                         if row.get('filepath'):
+                             processed_data[row['filepath']] = 0.0
                  return processed_data
 
             for row_num, row in enumerate(reader, start=2):
@@ -152,7 +161,7 @@ def main():
         help="Directory to search recursively for .sif files."
     )
     parser.add_argument(
-        "--csv", # Removed "-c" short flag
+        "--csv",
         default="results.csv", # Default filename
         help="Filename for reading/writing processing results (default: results.csv)"
     )
@@ -253,23 +262,23 @@ def main():
                     # Append status and time (time already at end)
                     print(f" ({status}: {return_code}) -- {duration:.1f} s")
 
-                # Store the RELATIVE path in the result object
-                result_obj = ProcessingResult(sif_relative_path, status, return_code, duration)
+                # Store the result object, including the index (idx)
+                result_obj = ProcessingResult(idx, sif_relative_path, status, return_code, duration)
 
             except OSError as e:
                  duration = time.perf_counter() - start_time
                  status = "OS Error"
                  # Append status and time (time already at end)
                  print(f" ({status}: {e}) -- {duration:.1f} s")
-                 # Store the RELATIVE path in the result object
-                 result_obj = ProcessingResult(sif_relative_path, status, None, duration)
+                 # Store the result object, including the index (idx)
+                 result_obj = ProcessingResult(idx, sif_relative_path, status, None, duration)
             except Exception as e:
                  duration = time.perf_counter() - start_time
                  status = "Unexpected Error"
                  # Append status and time (time already at end)
                  print(f" ({status}: {e}) -- {duration:.1f} s")
-                 # Store the RELATIVE path in the result object
-                 result_obj = ProcessingResult(sif_relative_path, status, None, duration)
+                 # Store the result object, including the index (idx)
+                 result_obj = ProcessingResult(idx, sif_relative_path, status, None, duration)
 
             # Append the result object to the list AND write to CSV
             if result_obj: # Ensure result_obj was created
@@ -309,4 +318,3 @@ def main():
 # Standard Python entry point guard
 if __name__ == "__main__":
     main()
-
