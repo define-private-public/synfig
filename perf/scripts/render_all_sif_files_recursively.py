@@ -227,11 +227,11 @@ def main():
                 if result.returncode == 0:
                     status = "Success"
                     # Append status and time (time already at end)
-                    print(f" [Ran: {status}] -- {duration:.1f} s")
+                    print(f" ({status}) -- {duration:.1f} s")
                 else:
                     status = "Failed"
                     # Append status and time (time already at end)
-                    print(f" [Ran: {status}] -- Code: {return_code} -- {duration:.1f} s")
+                    print(f" ({status}: {return_code}) -- {duration:.1f} s")
 
                 # Store the RELATIVE path in the result object
                 result_obj = ProcessingResult(sif_relative_path, status, return_code, duration)
@@ -240,14 +240,14 @@ def main():
                  duration = time.perf_counter() - start_time
                  status = "OS Error"
                  # Append status and time (time already at end)
-                 print(f" [Ran: {status}] -- {e} -- {duration:.1f} s")
+                 print(f" ({status}: {e}) -- {duration:.1f} s")
                  # Store the RELATIVE path in the result object
                  result_obj = ProcessingResult(sif_relative_path, status, None, duration)
             except Exception as e:
                  duration = time.perf_counter() - start_time
                  status = "Unexpected Error"
                  # Append status and time (time already at end)
-                 print(f" [Ran: {status}] -- {e} -- {duration:.1f} s")
+                 print(f" ({status}: {e}) -- {duration:.1f} s")
                  # Store the RELATIVE path in the result object
                  result_obj = ProcessingResult(sif_relative_path, status, None, duration)
 
