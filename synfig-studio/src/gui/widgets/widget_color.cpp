@@ -65,9 +65,9 @@ studio::render_color_to_window(const Cairo::RefPtr<Cairo::Context> &cr, const Gd
 		// In this case we need to render the alpha squares
 
 		const Color bg1 = gamma.apply(
-			Color::blend(color,Color(0.75, 0.75, 0.75),1.0).clamped() );
+			clamped(Color::blend(color,Color(0.75, 0.75, 0.75),1.0)));
 		const Color bg2 = gamma.apply(
-			Color::blend(color,Color(0.5, 0.5, 0.5),1.0).clamped() );
+			clamped(Color::blend(color,Color(0.5, 0.5, 0.5),1.0)));
 
 		bool toggle(false);
 		for(int i=0;i<width;i+=square_size)
@@ -100,7 +100,7 @@ studio::render_color_to_window(const Cairo::RefPtr<Cairo::Context> &cr, const Gd
 	}
 	else
 	{
-		synfig::Color c = gamma.apply(color.clamped());
+		synfig::Color c = gamma.apply(clamped(color));
         cr->set_source_rgb(c.get_r(), c.get_g(), c.get_b());
         cr->rectangle(ca.get_x(), ca.get_y(), width-1, height-1);
         cr->fill();

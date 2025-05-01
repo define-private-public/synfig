@@ -208,9 +208,8 @@ public:
                      const Angle& theta,
                      const value_type& a=1);
 
-
 	//! Clamps a color so that its values are in range. Ignores attempting to visualize negative colors.
-    Color clamped() const;
+	friend Color clamped(const Color &clr);
 
 	//! Clamps a color so that its values are in range.
     Color clamped_negative() const;
