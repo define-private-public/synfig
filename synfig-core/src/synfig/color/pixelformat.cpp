@@ -86,7 +86,7 @@ namespace {
 		const Color &src,
 		const Gamma* )
 	{
-		const Color color = src.clamped();
+		const Color color = clamped(src);
 
 		// put alpha before color channels if need
 		if (alpha && alpha_start)

@@ -174,9 +174,9 @@ Color::clamped_negative()const
 }
 
 Color
-Color::clamped()const
+synfig::clamped(const Color &clr)
 {
-	Color ret(*this);
+	Color ret(clr);
 	if(ret.get_r()<0)
 		ret.set_r(0);
 	if(ret.get_g()<0)

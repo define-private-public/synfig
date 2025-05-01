@@ -158,7 +158,7 @@ synfig::render(
 						);
 					if(!no_clamp)
 					{
-						color=color.clamped();
+						color=clamped(color);
 						c+=color*color.get_a();
 						pool+=color.get_a();
 					}

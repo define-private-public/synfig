@@ -44,7 +44,7 @@ class Color
 public:
 	typedef ColorReal value_type;
 
-private:
+public:
 	value_type r_, g_, b_, a_;
 
 public:
@@ -208,10 +208,6 @@ public:
                      const Angle& theta,
                      const value_type& a=1);
 
-
-	//! Clamps a color so that its values are in range. Ignores attempting to visualize negative colors.
-    Color clamped() const;
-
 	//! Clamps a color so that its values are in range.
     Color clamped_negative() const;
 
@@ -331,6 +327,10 @@ public:
 	static bool is_straight(BlendMethod x)
 		{ return BLEND_METHODS_STRAIGHT & (1 << x); }
 }; // END of class Color
+
+
+//! Clamps a color so that its values are in range. Ignores attempting to visualize negative colors.
+Color clamped(const Color &clr);
 
 } // synfig namespace
 
