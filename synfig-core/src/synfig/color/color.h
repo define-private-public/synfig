@@ -208,10 +208,6 @@ public:
                      const Angle& theta,
                      const value_type& a=1);
 
-
-	//! Clamps a color so that its values are in range. Ignores attempting to visualize negative colors.
-    Color clamped() const;
-
 	//! Clamps a color so that its values are in range.
     Color clamped_negative() const;
 
@@ -331,6 +327,10 @@ public:
 	static bool is_straight(BlendMethod x)
 		{ return BLEND_METHODS_STRAIGHT & (1 << x); }
 }; // END of class Color
+
+
+//! Clamps a color so that its values are in range. Ignores attempting to visualize negative colors.
+Color clamped(ColorReal r, ColorReal g, ColorReal b, ColorReal a);
 
 } // synfig namespace
 

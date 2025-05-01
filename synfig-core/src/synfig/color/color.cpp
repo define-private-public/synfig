@@ -174,29 +174,28 @@ Color::clamped_negative()const
 }
 
 Color
-Color::clamped()const
+synfig::clamped(ColorReal r, ColorReal g, ColorReal b, ColorReal a)
 {
-	Color ret(*this);
-	if(ret.get_r()<0)
-		ret.set_r(0);
-	if(ret.get_g()<0)
-		ret.set_g(0);
-	if(ret.get_b()<0)
-		ret.set_b(0);
-	if(ret.get_a()<0)
-		ret.set_a(0);
+	if(r < 0)
+		r = 0;
+	if(g < 0)
+		g = 0;
+	if(b < 0)
+		b = 0;
+	if(a < 0)
+		a = 0;
 
-	if(ret.r_>1) ret.r_=1;
-	if(ret.g_>1) ret.g_=1;
-	if(ret.b_>1) ret.b_=1;
-	if(ret.a_>1) ret.a_=1;
+	if(r > 1) r = 1;
+	if(g > 1) g = 1;
+	if(b > 1) b = 1;
+	if(a > 1) a = 1;
 
-	if(std::isnan(ret.get_r())) ret.r_=0.5;
-	if(std::isnan(ret.get_g())) ret.g_=0.5;
-	if(std::isnan(ret.get_b())) ret.b_=0.5;
-	if(std::isnan(ret.get_a())) ret.a_=1;
+	if(std::isnan(r)) r = 0.5;
+	if(std::isnan(g)) g = 0.5;
+	if(std::isnan(b)) b = 0.5;
+	if(std::isnan(a)) a = 1;
 
-	return(ret);
+	return Color(r, g, b, a);
 }
 
 

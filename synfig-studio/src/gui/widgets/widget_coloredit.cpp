@@ -202,10 +202,22 @@ ColorSlider::on_draw(const Cairo::RefPtr<Cairo::Context> &cr)
 		Color c = color;
 		color_func(c, i/float(width));
 		
+		const Color blend1 = Color::blend(c,bg1,1.0);
 		const Color c1 = gamma.apply(
-				Color::blend(c,bg1,1.0).clamped() );
+				clamped(
+					blend1.get_r(),
+					blend1.get_g(),
+					blend1.get_b(),
+					blend1.get_a()
+				));
+		const Color blend2 = Color::blend(c,bg2,1.0);
 		const Color c2 = gamma.apply(
-				Color::blend(c,bg2,1.0).clamped() );
+				clamped(
+					blend2.get_r(),
+					blend2.get_g(),
+					blend2.get_b(),
+					blend2.get_a()
+				));
 		assert(c1.is_valid());
 		assert(c2.is_valid());
 
@@ -476,7 +488,13 @@ bool are_close_colors(Gdk::RGBA const& a, Gdk::RGBA const& b) {
 
 void Widget_ColorEdit::setHVSColor(const synfig::Color& color)
 {
-	Color c = App::get_selected_canvas_gamma().get_inverted().apply(color).clamped();
+	const Color x = App::get_selected_canvas_gamma().get_inverted().apply(color);
+	Color c = clamped(
+		x.get_r(),
+		x.get_g(),
+		x.get_b(),
+		x.get_a()
+	);
 	Gdk::RGBA gdkColor;
 	gdkColor.set_rgba(c.get_r(), c.get_g(), c.get_b(), c.get_a());
 	if (!are_close_colors(hvsColorWidget->get_current_rgba(), gdkColor)) {
@@ -647,7 +665,14 @@ Widget_ColorEdit::get_value()
 	assert(color.is_valid());
 
 	if(notebook->get_current_page()!=0)
-		color=color.clamped();
+	{
+		color=clamped(
+			color.get_r(),
+			color.get_g(),
+			color.get_b(),
+			color.get_a()
+		);
+	}
 
 	/*{
 		// Clamp out negative values

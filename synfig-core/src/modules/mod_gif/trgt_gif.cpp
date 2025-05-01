@@ -169,7 +169,12 @@ gif::output_curr_palette()
 	// Output the color table
 	for(int i = 0; i < 256/(1<<(8-rootsize)); ++i) {
 		if (i < (int)curr_palette.size()) {
-			Color color = curr_palette[i].color.clamped();
+			Color color = clamped(
+				curr_palette[i].color.get_r(),
+				curr_palette[i].color.get_g(),
+				curr_palette[i].color.get_b(),
+				curr_palette[i].color.get_a()
+			);
 			fputc((unsigned char)(color.get_r()*255.99), file.get());
 			fputc((unsigned char)(color.get_g()*255.99), file.get());
 			fputc((unsigned char)(color.get_b()*255.99), file.get());
@@ -318,7 +323,12 @@ gif::end_frame()
 		// Now we compress it!
 		for(int i=0; i < w; ++i)
 		{
-			Color color(curr_surface[cur_scanline][i].clamped());
+			Color color(clamped(
+				curr_surface[cur_scanline][i].get_r(),
+				curr_surface[cur_scanline][i].get_g(),
+				curr_surface[cur_scanline][i].get_b(),
+				curr_surface[cur_scanline][i].get_a()
+			));
 			Palette::iterator iter(curr_palette.find_closest(color, Gamma()));
 
 			if(dithering)

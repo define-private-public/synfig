@@ -135,10 +135,18 @@ ValueNode_Random::operator()(Time t)const
 		return round_to_int((*link_)(t).get(  bool()) +
 							random(Smooth(smooth), 0, 0, 0, speed, loop) * radius) > 0;
 	if (type == type_color)
-		return (((*link_)(t).get( Color()) +
+	{
+		const Color clr = ((*link_)(t).get( Color()) +
 				 Color(random(Smooth(smooth), 0, 0, 0, speed, loop),
 					   random(Smooth(smooth), 1, 0, 0, speed, loop),
-					   random(Smooth(smooth), 2, 0, 0, speed, loop), 0) * radius).clamped());
+					   random(Smooth(smooth), 2, 0, 0, speed, loop), 0) * radius);
+		return clamped(
+			clr.get_r(),
+			clr.get_g(),
+			clr.get_b(),
+			clr.get_a()
+		);
+	}
 	if (type == type_integer)
 		return round_to_int((*link_)(t).get(   int()) +
 							random(Smooth(smooth), 0, 0, 0, speed, loop) * radius);

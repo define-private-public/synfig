@@ -506,7 +506,12 @@ Dock_PalEdit::set_default_palette()
 	{
 		Color c(Color::red());
 		c.set_hue(c.get_hue()-Angle::rot(float(i)/(float)(width)));
-		c=c.clamped();
+		c=clamped(
+			c.get_r(),
+			c.get_g(),
+			c.get_b(),
+			c.get_a()
+		);
 		float s(float(levels-j)/float(levels));
 		s*=s;
 		c.set_r(c.get_r()*s);

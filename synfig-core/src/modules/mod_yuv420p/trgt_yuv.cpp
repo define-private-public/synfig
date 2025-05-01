@@ -134,7 +134,12 @@ yuv::end_frame()
 		for(x=0;x<w;x++)
 		{
 			Color& c(surface[y][x]);
-			c=c.clamped();
+			c=clamped(
+				c.get_r(),
+				c.get_g(),
+				c.get_b(),
+				c.get_a()
+			);
 			float f(c.get_y());
 			int i(synfig::clamp(round_to_int(c.get_y()*Y_RANGE),0, Y_RANGE)+Y_FLOOR);
 
